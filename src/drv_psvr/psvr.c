@@ -258,13 +258,15 @@ static void get_device_list(ohmd_driver* driver, ohmd_device_list* list)
 
 	int idx = 0;
 	while (cur_dev) {
-		ohmd_device_desc* desc = &list->devices[list->num_devices++];
+		ohmd_device_desc* desc;
 
 		// Only register one device for the sensor interface
 		if (cur_dev->interface_number != 4) {
 			cur_dev = cur_dev->next;
 			continue;
 		}
+
+		desc = &list->devices[list->num_devices++];
 
 		strcpy(desc->driver, "OpenHMD Sony PSVR Driver");
 		strcpy(desc->vendor, "Sony");
