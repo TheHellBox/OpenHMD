@@ -260,6 +260,7 @@ static void get_device_list(ohmd_driver* driver, ohmd_device_list* list)
 	while (cur_dev) {
 		ohmd_device_desc* desc;
 
+		printf("L: %04x:%04x %s (%d,%d,%d)\n", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->usage_page, cur_dev->usage, cur_dev->interface_number);
 		// Only register one device for the sensor interface
 		if (cur_dev->interface_number != 4) {
 			cur_dev = cur_dev->next;
