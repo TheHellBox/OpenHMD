@@ -146,7 +146,7 @@ static void close_device(ohmd_device* device)
 	free(device);
 }
 
-static hid_device* open_device_idx(int manufacturer, int product, int iface, int device_index)
+static hid_device* open_device_idx(int manufacturer, int product, int iface, int usage_page, int device_index)
 {
 	struct hid_device_info* devs = hid_enumerate(manufacturer, product);
 	struct hid_device_info* cur_dev = devs;
@@ -154,9 +154,14 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 	int idx = 0;
 	hid_device* ret = NULL;
 
+
 	while (cur_dev) {
 		printf("%04x:%04x %s (%d)\n", manufacturer, product, cur_dev->path, cur_dev->interface_number);
-		if (cur_dev->interface_number != iface) {
+
+		// Only register one device for the sensor interface
+		if (!(cur_dev->interface_number == iface ||
+		      (cur_dev->interface_number == -1 &&
+		       cur_dev->usage_page == usage_page))) {
 			cur_dev = cur_dev->next;
 			continue;
 		}
@@ -188,7 +193,7 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 	int idx = atoi(desc->path);
 
 	// Open the HMD Sensor device
-	priv->hmd_handle = open_device_idx(SONY_ID, PSVR_HMD, 4, idx);
+	priv->hmd_handle = open_device_idx(SONY_ID, PSVR_HMD, 4, 0xff00, idx);
 
 	if(!priv->hmd_handle)
 		goto cleanup;
@@ -199,7 +204,7 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 	}
 
 	// Open the HMD Control device
-	priv->hmd_control = open_device_idx(SONY_ID, PSVR_HMD, 5, idx);
+	priv->hmd_control = open_device_idx(SONY_ID, PSVR_HMD, 5, 0xff01, idx);
 
 	if(!priv->hmd_control)
 		goto cleanup;
@@ -262,7 +267,9 @@ static void get_device_list(ohmd_driver* driver, ohmd_device_list* list)
 
 		printf("L: %04x:%04x %s (%d,%d,%d)\n", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->usage_page, cur_dev->usage, cur_dev->interface_number);
 		// Only register one device for the sensor interface
-		if (cur_dev->interface_number != 4) {
+		if (!(cur_dev->interface_number == 4 ||
+		      (cur_dev->interface_number == -1 &&
+		       cur_dev->usage_page == 0xff00))) {
 			cur_dev = cur_dev->next;
 			continue;
 		}
