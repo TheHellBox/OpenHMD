@@ -156,16 +156,19 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
 	while (cur_dev) {
 		printf("%04x:%04x %s (%d)\n", manufacturer, product, cur_dev->path, cur_dev->interface_number);
+		if (cur_dev->interface_number != iface) {
+			cur_dev = cur_dev->next;
+			continue;
+		}
 
-		if(idx == device_index && iface == cur_dev->interface_number){
+		if(idx == device_index){
 			ret = hid_open_path(cur_dev->path);
 			printf("opening\n");
 		}
 
 		cur_dev = cur_dev->next;
 
-		if (cur_dev->interface_number == iface)
-			idx++;
+		idx++;
 	}
 
 	hid_free_enumeration(devs);
