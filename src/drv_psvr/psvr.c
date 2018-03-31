@@ -146,31 +146,26 @@ static void close_device(ohmd_device* device)
 	free(device);
 }
 
-static hid_device* open_device_idx(int manufacturer, int product, int iface, int iface_tot, int device_index)
+static hid_device* open_device_idx(int manufacturer, int product, int iface, int device_index)
 {
 	struct hid_device_info* devs = hid_enumerate(manufacturer, product);
 	struct hid_device_info* cur_dev = devs;
 
 	int idx = 0;
-	int iface_cur = 0;
 	hid_device* ret = NULL;
 
 	while (cur_dev) {
-		printf("%04x:%04x %s\n", manufacturer, product, cur_dev->path);
+		printf("%04x:%04x %s (%d)\n", manufacturer, product, cur_dev->path, cur_dev->interface_number);
 
-		if(ohmd_find_usb_endpoint(cur_dev->path, device_index) > 0 && iface == iface_cur){
+		if(idx == device_index && iface == cur_dev->interface_number){
 			ret = hid_open_path(cur_dev->path);
 			printf("opening\n");
 		}
 
 		cur_dev = cur_dev->next;
 
-		iface_cur++;
-
-		if(iface_cur >= iface_tot){
+		if (cur_dev->interface_number == iface)
 			idx++;
-			iface_cur = 0;
-		}
 	}
 
 	hid_free_enumeration(devs);
@@ -187,8 +182,10 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 
 	priv->base.ctx = driver->ctx;
 
-	// Open the HMD device
-	priv->hmd_handle = open_device_idx(SONY_ID, PSVR_HMD, 0, 0, 4);
+	int idx = atoi(desc->path);
+
+	// Open the HMD Sensor device
+	priv->hmd_handle = open_device_idx(SONY_ID, PSVR_HMD, 4, idx);
 
 	if(!priv->hmd_handle)
 		goto cleanup;
@@ -199,7 +196,7 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 	}
 
 	// Open the HMD Control device
-	priv->hmd_control = open_device_idx(SONY_ID, PSVR_HMD, 0, 0, 5);
+	priv->hmd_control = open_device_idx(SONY_ID, PSVR_HMD, 5, idx);
 
 	if(!priv->hmd_control)
 		goto cleanup;
@@ -259,6 +256,10 @@ static void get_device_list(ohmd_driver* driver, ohmd_device_list* list)
 	int idx = 0;
 	while (cur_dev) {
 		ohmd_device_desc* desc = &list->devices[list->num_devices++];
+
+		// Only register one device for the sensor interface
+		if (cur_dev->interface_number != 4)
+			continue;
 
 		strcpy(desc->driver, "OpenHMD Sony PSVR Driver");
 		strcpy(desc->vendor, "Sony");
